@@ -26,6 +26,27 @@ select_profile() {
 }
 
 case "${1:-status}" in
+  inherit-environment)
+    # Coder prepares the complete command environment only for agent sessions.
+    # Run from that session rather than copying selected variables or secrets.
+    [[ "${CODER:-}" == true && -n "${GIT_SSH_COMMAND:-}" ]] || exit 0
+    exec 7>"$state/environment.lock"
+    flock 7
+    if running && [[ -f "$state/coder-environment.pid" ]] && \
+        [[ "$(cat "$state/coder-environment.pid")" == "$(cat "$state/service.pid")" ]]; then
+      exit 0
+    fi
+    # The lifecycle server predates the Coder session. Adopt its environment
+    # once; subsequent SSH sessions must not interrupt active Orca terminals.
+    # Login shells may start in HOME; retain the lifecycle server's project.
+    if running && [[ -f "$state/project-root" ]]; then
+      IFS= read -r -d '' ORCA_WEB_PROJECT_ROOT < "$state/project-root"
+      export ORCA_WEB_PROJECT_ROOT
+    fi
+    bash "$script" stop 7>&-
+    export ORCA_WEB_CODER_ENVIRONMENT=1
+    bash "$script" start 7>&-
+    ;;
   start)
     # Serialize lifecycle hooks so a concurrent start cannot truncate the log
     # containing the running server's pairing offer.
@@ -59,6 +80,11 @@ case "${1:-status}" in
     exec 9>"$state/service.lock"
     flock -n 9 || exit 0
     printf '%s\n' "$$" > "$state/service.pid"
+    printf '%s\0' "$project" > "$state/project-root"
+    rm -f "$state/coder-environment.pid"
+    if [[ "${ORCA_WEB_CODER_ENVIRONMENT:-}" == 1 ]]; then
+      printf '%s\n' "$$" > "$state/coder-environment.pid"
+    fi
     trap 'rm -f "$state/service.pid"' EXIT
     # A terminal launched by another Orca inherits its routing and identity.
     # This server must have its own profile and must not attach to that runtime.
@@ -117,5 +143,5 @@ case "${1:-status}" in
     select_profile
     exec /opt/orca-web/resources/bin/orca-ide "$@"
     ;;
-  *) echo "Usage: bash $script {start|stop|status|pair HTTPS_APP_URL|cli COMMAND...}" >&2; exit 2 ;;
+  *) echo "Usage: bash $script {start|stop|status|inherit-environment|pair HTTPS_APP_URL|cli COMMAND...}" >&2; exit 2 ;;
 esac

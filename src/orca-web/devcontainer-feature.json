@@ -1,6 +1,6 @@
 {
   "id": "orca-web",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "name": "Orca Web",
   "description": "Orca Web with persistent profile, lifecycle and loopback pairing gateway (Ubuntu 26.04).",
   "options": {
