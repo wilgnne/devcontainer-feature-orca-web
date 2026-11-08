@@ -1,0 +1,21 @@
+{
+  "id": "orca-web",
+  "version": "1.0.0",
+  "name": "Orca Web",
+  "description": "Orca Web with persistent profile, lifecycle and loopback pairing gateway (Ubuntu 26.04, vscode user).",
+  "options": {
+    "version": {
+      "type": "string",
+      "default": "v1.4.253",
+      "description": "Orca release tag"
+    }
+  },
+  "mounts": [
+    {
+      "source": "homeprod-orca-web",
+      "target": "/home/vscode/.local/share/homeprod-orca-web",
+      "type": "volume"
+    }
+  ],
+  "postStartCommand": "/usr/local/bin/orca-web start"
+}

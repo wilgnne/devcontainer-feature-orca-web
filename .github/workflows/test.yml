@@ -1,0 +1,21 @@
+name: Test
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: bash -n src/orca-web/install.sh src/orca-web/install-orca.sh src/orca-web/orca-web.sh
+      - run: node --test src/orca-web/orca-web-gateway.test.mjs
+      - uses: devcontainers/action@v1
+        with:
+          validate-only: 'true'
+          base-path-to-features: ./src

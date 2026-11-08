@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Parear Orca Desktop</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #10151d; color: #eef2f7; font: 16px/1.6 system-ui, sans-serif; padding: 40px 20px; }
+  main { max-width: 680px; margin: auto; }
+  h1 { line-height: 1.2; }
+  .card { background: #1b2430; padding: 24px; border: 1px solid #354154; border-radius: 16px; }
+  #qr { width: fit-content; max-width: 100%; margin: 24px auto; background: white; padding: 12px; border-radius: 8px; }
+  #qr svg { display: block; width: 320px; max-width: 100%; height: auto; }
+  input { width: 100%; padding: 12px; border: 1px solid #64748b; border-radius: 8px; background: #10151d; color: #eef2f7; font: inherit; }
+  textarea { width: 100%; min-height: 110px; background: #10151d; color: #eef2f7; border: 1px solid #64748b; border-radius: 8px; padding: 12px; overflow-wrap: anywhere; }
+  button { background: #b1edd9; color: #10251f; border: 0; border-radius: 8px; padding: 12px 20px; font: inherit; cursor: pointer; margin-top: 12px; }
+  button:disabled { opacity: .5; cursor: wait; }
+  :focus-visible { outline: 3px solid #b1edd9; outline-offset: 3px; }
+  a { color: #b1edd9; }
+  .note { color: #b6c2d2; font-size: 14px; }
+</style>
+<main>
+  <p>ORCA · SERVIDOR REMOTO</p>
+  <h1>Parear Orca Desktop</h1>
+  <p>Conecte seu desktop ao Orca que já está rodando neste workspace.</p>
+  <section class="card" aria-label="Link de pareamento">
+    <form id="public-form">
+      <label for="public-url">URL pública do Orca</label>
+      <input id="public-url" type="url" required placeholder="https://seu-orca.exemplo.com" spellcheck="false" autocomplete="off" aria-describedby="public-help">
+      <p id="public-help" class="note">Informe o endereço do app Orca Web no Coder. Ele pode ter um domínio diferente desta página.</p>
+      <button id="submit" type="submit">Gerar link de acesso</button>
+    </form>
+    <p id="status" role="status">Carregando link de acesso…</p>
+    <div id="qr" role="img" aria-label="QR code do link de pareamento" hidden></div>
+    <label for="url">URL de acesso</label>
+    <textarea id="url" readonly spellcheck="false" aria-label="URL de acesso do Orca"></textarea>
+    <button id="copy" disabled>Copiar URL</button>
+    <button id="reload" type="button">Atualizar</button>
+    <p><a id="web" hidden>Abrir Orca Web com este acesso</a></p>
+    <p>No Orca Desktop, abra <strong>Settings → Remote Orca Servers → Add Server</strong> e cole a URL. O QR code contém o mesmo link.</p>
+    <p class="note">Este link concede acesso ao servidor. Compartilhe apenas com o dispositivo que deseja parear.</p>
+    <p class="note">O Orca Web e a conexão do desktop usam o endpoint público. O token deste link autentica o acesso; a geração de links fica restrita ao proprietário no Coder.</p>
+  </section>
+</main>
+<script src="/__orca/qrcode.js"></script>
+<script>
+const agentName = __ORCA_AGENT_NAME_JSON__;
+async function coderAppURL(origin, name, slug) {
+  const url = new URL(origin);
+  if (!/^[0-9a-v]{8}-orca-pair--/.test(url.hostname)) throw new Error('Abra pelo botão do Coder.');
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(name + '/' + slug)));
+  const alphabet = '0123456789abcdefghijklmnopqrstuv';
+  let prefix = '', bits = 0, value = 0;
+  for (const byte of digest.slice(0, 5)) {
+    value = (value << 8) | byte; bits += 8;
+    while (bits >= 5) { bits -= 5; prefix += alphabet[(value >>> bits) & 31]; }
+  }
+  url.hostname = url.hostname.replace(/^[0-9a-v]{8}-orca-pair--/, prefix + '-' + slug + '--');
+  return url.origin;
+}
+const status = document.getElementById('status');
+const field = document.getElementById('url');
+const copy = document.getElementById('copy');
+const reload = document.getElementById('reload');
+const qr = document.getElementById('qr');
+const web = document.getElementById('web');
+const publicURL = document.getElementById('public-url');
+const submit = document.getElementById('submit');
+async function load() {
+  web.hidden = true; web.removeAttribute('href');
+  reload.disabled = true; submit.disabled = true; copy.disabled = true; field.value = ''; qr.hidden = true; qr.replaceChildren();
+  status.textContent = 'Carregando link de acesso…';
+  try {
+    let publicApp;
+    try {
+      publicApp = new URL(publicURL.value.trim());
+      if (publicApp.protocol !== 'https:' || publicApp.username || publicApp.password || publicApp.pathname !== '/' || publicApp.search || publicApp.hash) throw new Error();
+    } catch {
+      status.textContent = 'Informe uma URL pública HTTPS válida, sem caminho, credenciais ou parâmetros.';
+      return;
+    }
+    const response = await fetch('/__orca/pairing', {cache: 'no-store', credentials: 'same-origin'});
+    if (!response.ok) throw new Error();
+    const offer = await response.json();
+    offer.endpoint = publicApp.origin.replace(/^http/, 'ws');
+    const bytes = new TextEncoder().encode(JSON.stringify(offer));
+    const code = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const url = 'orca://pair?' + new URLSearchParams({code});
+    const image = qrcode(0, 'L');
+    image.addData(url); image.make();
+    qr.innerHTML = image.createSvgTag({cellSize: 4, margin: 16, scalable: true});
+    qr.hidden = false; field.value = url; copy.disabled = false;
+    web.href = publicApp.origin + '/web-index.html#' + new URLSearchParams({pairing: code});
+    web.hidden = false;
+    status.textContent = 'Link pronto para parear.';
+  } catch {
+    status.textContent = 'Não foi possível carregar o pareamento. Verifique o servidor e clique em Atualizar.';
+  } finally { reload.disabled = false; submit.disabled = false; }
+}
+copy.addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(field.value); status.textContent = 'URL copiada.'; }
+  catch { field.focus(); field.select(); status.textContent = 'Selecione Copiar no navegador ou pressione Ctrl+C (⌘C no Mac).'; }
+});
+document.getElementById('public-form').addEventListener('submit', event => { event.preventDefault(); return load(); });
+publicURL.addEventListener('input', () => {
+  field.value = ''; copy.disabled = true; qr.hidden = true; qr.replaceChildren();
+  web.hidden = true; web.removeAttribute('href');
+  status.textContent = 'Clique em Gerar link de acesso para aplicar o endereço.';
+});
+reload.addEventListener('click', load);
+async function initialize() {
+  try { publicURL.value = await coderAppURL(location.origin, agentName, 'orca'); }
+  catch {
+    status.textContent = 'Informe a URL pública do Orca e clique em Gerar link de acesso.';
+    return;
+  }
+  await load();
+}
+initialize();
+</script>
+</html>
