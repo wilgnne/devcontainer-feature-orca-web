@@ -2,8 +2,10 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-# Requires Ubuntu 26.04 and the vscode user.
-id vscode >/dev/null
+# Features install as root; use the effective remote user, not the build user.
+remote_user=$(id -un "${_REMOTE_USER:-${_CONTAINER_USER:-root}}")
+remote_uid=$(id -u "$remote_user")
+remote_gid=$(id -g "$remote_user")
 export DEBIAN_FRONTEND=noninteractive
 apt-get update && apt-get install -y --no-install-recommends \
     bash ca-certificates curl dbus dbus-user-session nodejs procps util-linux xvfb \
@@ -21,6 +23,9 @@ install -m 755 orca-web.sh /usr/local/lib/orca-web/orca-web.sh
 install -m 644 orca-web-gateway.mjs orca-web-pair.mjs orca-web-lock.mjs orca-web-name.mjs orca-web-desktop.html /usr/local/lib/orca-web/
 ln -sf /usr/local/lib/orca-web/orca-web.sh /usr/local/bin/orca-web
 
-# Create all parents before Docker mounts the persistent volume.
-install -d -m 755 -o vscode -g vscode /home/vscode/.local /home/vscode/.local/share
-install -d -m 700 -o vscode -g vscode /home/vscode/.local/share/homeprod-orca-web
+# Docker seeds new volumes from this directory. The entrypoint repairs reused
+# volumes after Dev Containers changes the remote user's UID/GID.
+printf '%s\n' "$remote_user" > /etc/orca-web-user
+chmod 644 /etc/orca-web-user
+install -m 755 orca-web-init.sh /usr/local/lib/orca-web/orca-web-init.sh
+install -d -m 700 -o "$remote_uid" -g "$remote_gid" /var/lib/orca-web

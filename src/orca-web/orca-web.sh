@@ -5,14 +5,12 @@ umask 077
 script=$(realpath "${BASH_SOURCE[0]}")
 export ORCA_WEB_PROJECT_ROOT="${ORCA_WEB_PROJECT_ROOT:-$PWD}"
 project="$ORCA_WEB_PROJECT_ROOT"
-state="$HOME/.local/share/homeprod-orca-web"
+state=/var/lib/orca-web
 port=6770
 backend_port=6771
 
-# The persistent volume is initially root-owned. Change only its mount point.
-if [[ ! -d "$state" || ! -w "$state" ]]; then
-  sudo -n install -d -m 700 -o "$(id -u)" -g "$(id -g)" "$state"
-fi
+# Check the volume before opening the persistent profile or service locks.
+"$(dirname "$script")/orca-web-init.sh"
 mkdir -p "$state/profile"
 chmod 700 "$state" "$state/profile"
 
@@ -49,7 +47,7 @@ case "${1:-status}" in
           curl -fs --max-time 1 "http://127.0.0.1:6772/__orca/pairing" -o /dev/null; then
         node "$(dirname "$script")/orca-web-name.mjs" "$state/profile" "$project"
         bash "$script" cli repo add --path "$project" --json >/dev/null
-        echo 'Orca Web ready on port 6770. Open its Coder app; see .devcontainer/README.md for pairing.'
+        echo 'Orca Web ready on port 6770. Open its Coder app; see the feature README for pairing.'
         exit 0
       fi
       sleep 1

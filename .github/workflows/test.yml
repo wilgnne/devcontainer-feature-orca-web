@@ -1,8 +1,7 @@
 name: Test
 on:
-  push:
-    branches: [main]
   pull_request:
+  workflow_call:
 permissions:
   contents: read
 jobs:
@@ -13,9 +12,24 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: bash -n src/orca-web/install.sh src/orca-web/install-orca.sh src/orca-web/orca-web.sh
+      - run: bash -n src/orca-web/*.sh test/*.sh
       - run: node --test src/orca-web/orca-web-gateway.test.mjs
       - uses: devcontainers/action@v1
         with:
           validate-only: 'true'
           base-path-to-features: ./src
+  users:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        user: [vscode, node, developer, root]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install for the selected remote user
+        run: docker build --build-arg REMOTE_USER=${{ matrix.user }} -f test/Dockerfile -t orca-web-user-test .
+      - name: Test user and persistent volume without sudo
+        run: |
+          docker volume create orca-web-user-test
+          trap 'docker volume rm orca-web-user-test' EXIT
+          docker run --rm --mount type=volume,source=orca-web-user-test,target=/var/lib/orca-web --entrypoint bash orca-web-user-test /usr/local/lib/orca-web/test-user.sh

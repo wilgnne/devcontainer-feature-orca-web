@@ -1,11 +1,9 @@
 import { readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 // Pairing remains Orca's native flow. Only translate its loopback endpoint to
 // the Coder application's HTTPS origin; keep the credential in a URL fragment.
-export function pairingURL(origin, logPath = join(homedir(), '.local/share/homeprod-orca-web/server.log')) {
+export function pairingURL(origin, logPath = '/var/lib/orca-web/server.log') {
   const app = new URL(origin);
   if (app.protocol !== 'https:' && !(app.protocol === 'http:' && app.hostname === '127.0.0.1')) {
     throw new Error('Use the HTTPS URL of the Coder app (or HTTP loopback for local tests).');

@@ -5,14 +5,18 @@ on:
     branches: [main]
     paths:
       - 'src/**'
-      - '.github/workflows/release.yml'
+      - '.github/workflows/**'
+      - 'test/**'
 concurrency:
   group: publish-feature
   cancel-in-progress: false
 permissions:
   contents: read
 jobs:
+  validate:
+    uses: ./.github/workflows/test.yml
   publish:
+    needs: validate
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -23,7 +27,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: bash -n src/orca-web/install.sh src/orca-web/install-orca.sh src/orca-web/orca-web.sh
+      - run: bash -n src/orca-web/*.sh
       - run: node --test src/orca-web/orca-web-gateway.test.mjs
       - name: Publish semantic version tags to GHCR
         uses: devcontainers/action@v1
