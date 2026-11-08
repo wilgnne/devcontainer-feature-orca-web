@@ -1,21 +1,73 @@
 # Orca Web Dev Container Feature
 
-Installs Orca Web, a persistent profile, lifecycle commands and separate public and private pairing gateways.
+Built for [Coder](https://coder.com): run Orca alongside your project in a dev container, open Orca Web from the workspace dashboard, and pair Orca Desktop through a private dashboard app. The feature installs Orca Web, a persistent profile, lifecycle commands and separate public and private pairing gateways.
 
-## Usage
+## Using with Coder
 
 Requires **Ubuntu 26.04** and x86_64 or arm64. The effective Dev Container `remoteUser` is detected automatically (`vscode`, `node`, a custom user, or `root`). The primary group is resolved independently of the username.
 
+Add the feature and the dashboard apps to your project's `.devcontainer/devcontainer.json`. Merge these entries into any existing `features` and `customizations.coder.apps` configuration:
+
 ```json
 {
+  "name": "Orca Web",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu26.04",
   "features": {
     "ghcr.io/wilgnne/devcontainer-feature-orca-web/orca-web:1": {
       "version": "v1.4.253"
     }
+  },
+  "customizations": {
+    "coder": {
+      "apps": [
+        {
+          "slug": "orca-pair",
+          "displayName": "Pair Orca Desktop",
+          "url": "http://localhost:6772",
+          "subdomain": true,
+          "share": "owner",
+          "openIn": "tab"
+        },
+        {
+          "slug": "orca",
+          "displayName": "Orca Web",
+          "url": "http://localhost:6770",
+          "subdomain": true,
+          "share": "public",
+          "openIn": "tab",
+          "healthCheck": {
+            "url": "http://localhost:6770/",
+            "interval": 10,
+            "threshold": 6
+          }
+        }
+      ]
+    }
   }
 }
 ```
+
+The Coder deployment must support dev containers, allow public apps, and have [wildcard app DNS and TLS configured](https://coder.com/docs/admin/networking/wildcard-access-url) for `subdomain: true`. Rebuild the dev container from Coder after changing this configuration. The buttons belong to the dev container's agent.
+
+| Dashboard button | Port | Access | Purpose |
+| --- | --- | --- | --- |
+| **Orca Web** | 6770 | `public` | Browser UI and WebSocket endpoint used by Orca clients. |
+| **Pair Orca Desktop** | 6772 | `owner` | Private pairing page with a QR code, native pairing URL and browser access link. |
+
+Keep the `orca` and `orca-pair` slugs: the pairing page uses them to infer the public app address. The feature installs the services; the project declares the buttons through [`customizations.coder.apps`](https://coder.com/docs/user-guides/devcontainers/customizing-dev-containers#custom-apps).
+
+### Open the browser UI or pair Orca Desktop
+
+1. Open **Pair Orca Desktop** while signed in as the workspace owner in Coder.
+2. Check the **URL pública do Orca** field. It is inferred from the Coder app URL and the workspace directory name; if you set a custom Coder agent name or the inferred URL differs, enter the HTTPS address of **Orca Web** and click **Gerar link de acesso**.
+3. For browser access, click **Abrir Orca Web com este acesso**. For Orca Desktop, scan the QR code or copy the native `orca://pair?code=...` URL into **Settings → Remote Orca Servers → Add Server**.
+4. After authorizing a browser, you can use the **Orca Web** dashboard button directly.
+
+The public app is reachable without a Coder login so Orca Desktop can connect to its WebSocket endpoint. Orca authenticates client sessions; the public gateway does not expose the pairing offer. Keep the pairing app set to `share: "owner"` and keep pairing links private, since they grant access to the Orca server. The browser access link carries the offer in its URL fragment.
+
+All three listeners bind to loopback: public gateway **6770**, internal Orca backend **6771**, and private pairing **6772**. Only 6770 and 6772 need Coder apps. The public gateway blocks `/__orca`; do not expose the backend or private pairing port as public apps. No additional host Docker port publishing is required for this setup.
+
+## Runtime and persistence
 
 The feature version (`:1`, `:1.2`, or `:1.2.1`) is independent of the `version` option, which selects the Orca release.
 
@@ -54,8 +106,6 @@ The installer records `_REMOTE_USER` (falling back to `_CONTAINER_USER` and then
 The feature entrypoint repairs ownership of reused volumes when running as root. It resolves the configured user's current UID/GID at startup, including changes made by `updateRemoteUserUID`, and does not follow profile symlinks. The lifecycle command checks ownership too and can use existing passwordless sudo if available.
 
 If both the container entrypoint and remote user are non-root, sudo is absent, and an existing volume belongs to a different UID/GID, Linux requires a one-time initialization as root. Run `/usr/local/lib/orca-web/orca-web-init.sh` inside the container as root before starting Orca Web. The feature reports this explicitly and preserves the profile; it does not grant additional sudo permissions or make credentials world-readable.
-
-The public HTTP/WebSocket gateway listens on loopback port 6770, the Orca backend on 6771, and private pairing on 6772. Configure your Coder apps separately: expose 6770 as the Orca app and 6772 as an owner-only pairing app. The public gateway blocks `/__orca`; never expose the private pairing listener publicly. Pairing links grant server access and must remain private.
 
 ## Development
 
