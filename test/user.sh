@@ -6,6 +6,9 @@ init=/usr/local/lib/orca-web/orca-web-init.sh
 
 # The image has no sudo, even when the upstream image provided it.
 ! command -v sudo
+[[ -x /opt/orca-web/AppRun ]]
+[[ -x /opt/orca-web/resources/bin/orca-ide ]]
+[[ $(cat /opt/orca-web/orca-web-version) == v1.4.253 ]]
 [[ $(stat -c '%u:%g' "$state") == "$(id -u "$user"):$(id -g "$user")" ]]
 
 # A fresh Docker volume is seeded with the selected remote user's ownership.

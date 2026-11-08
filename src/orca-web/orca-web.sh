@@ -37,7 +37,7 @@ case "${1:-status}" in
       echo 'Orca Web is already running on port 6770.'
       exit 0
     fi
-    [[ -x /opt/homeprod-orca/AppRun ]] || {
+    [[ -x /opt/orca-web/AppRun ]] || {
       echo 'Orca is not installed. Rebuild the devcontainer.' >&2; exit 1;
     }
     # A detached session survives the end of the devcontainer lifecycle hook.
@@ -70,7 +70,7 @@ case "${1:-status}" in
     cd "$project"
     node "$(dirname "$script")/orca-web-gateway.mjs" 9>&- &
     gateway=$!
-    dbus-run-session -- /opt/homeprod-orca/AppRun --no-sandbox \
+    dbus-run-session -- /opt/orca-web/AppRun --no-sandbox \
       "--user-data-dir=$state/profile" serve --port "$backend_port" --bind 127.0.0.1 \
       --pairing-address 127.0.0.1 --project-root "$project" --json 9>&- &
     child=$!
@@ -115,7 +115,7 @@ case "${1:-status}" in
   cli)
     shift
     select_profile
-    exec /opt/homeprod-orca/resources/bin/orca-ide "$@"
+    exec /opt/orca-web/resources/bin/orca-ide "$@"
     ;;
   *) echo "Usage: bash $script {start|stop|status|pair HTTPS_APP_URL|cli COMMAND...}" >&2; exit 2 ;;
 esac

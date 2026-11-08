@@ -54,7 +54,7 @@ export function createGateway({ backendPort = 6771, logPath, privatePairing = fa
       }
       try {
         // Use a fixed loopback origin here. Only the page constructs the public
-        // endpoint, from location.origin, after receiving the native offer.
+        // endpoint from the public URL field after receiving the native offer.
         const url = new URL(pairingURL('http://127.0.0.1', logPath));
         const code = new URLSearchParams(url.hash.slice(1)).get('pairing');
         const offer = Buffer.from(code, 'base64url');

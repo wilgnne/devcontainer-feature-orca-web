@@ -17,15 +17,33 @@ Requires **Ubuntu 26.04** and x86_64 or arm64. The effective Dev Container `remo
 }
 ```
 
-The feature version (`:1`, `:1.1`, or `:1.1.0`) is independent of the `version` option, which selects the Orca release.
+The feature version (`:1`, `:1.2`, or `:1.2.0`) is independent of the `version` option, which selects the Orca release.
 
 `orca-web start` runs after container startup and registers the workspace directory. Commands: `start`, `stop`, `status`, `pair <public HTTPS URL>`, and `cli <arguments>`. Override the project with `ORCA_WEB_PROJECT_ROOT`.
 
-The Docker volume remains `homeprod-orca-web` for compatibility, mounted at the user-independent path `/var/lib/orca-web`. Logs are at `/var/lib/orca-web/server.log` and the Orca profile is at `/var/lib/orca-web/profile`. The log contains pairing credentials; keep it private. Installation paths retain their existing `homeprod` names. The feature does not install Codex or other agent CLIs.
+The Docker volume is named `orca-web` and mounted at `/var/lib/orca-web`. Orca is installed at `/opt/orca-web`, with the installed release recorded in `/opt/orca-web/orca-web-version`. The launcher and gateway resources are installed at `/usr/local/lib/orca-web` and exposed through `/usr/local/bin/orca-web`.
 
-### Upgrading from 1.0.0
+Logs are at `/var/lib/orca-web/server.log` and the profile is at `/var/lib/orca-web/profile`. The log contains pairing credentials; keep it private. The feature does not install Codex or other agent CLIs.
 
-Version 1.1.0 moves the mount target from `/home/vscode/.local/share/homeprod-orca-web` to `/var/lib/orca-web`, retaining the same named volume and its contents; no copying or deleting data is needed. Update any custom mounts and scripts that reference the old target, then rebuild. Avoid running two containers against the same profile simultaneously. For independent projects, override the mount at `/var/lib/orca-web` in `devcontainer.json` with a distinct volume source.
+### Upgrading an existing installation
+
+Version 1.2.0 standardizes installation paths and the default volume name on `orca-web`. Rebuild the container to install the binaries at the new location.
+
+If an earlier installation uses a different volume name, retain that volume by explicitly mounting it at `/var/lib/orca-web` in your project's `devcontainer.json`. Replace `YOUR_EXISTING_VOLUME` with the exact existing volume name:
+
+```json
+{
+  "mounts": [
+    {
+      "source": "YOUR_EXISTING_VOLUME",
+      "target": "/var/lib/orca-web",
+      "type": "volume"
+    }
+  ]
+}
+```
+
+The project mount overrides the feature mount at the same target. This reuses the existing profile without copying or deleting data. Do not run two containers against the same profile simultaneously. For independent projects, use a distinct volume source for each project.
 
 ### Ownership and containers without sudo
 

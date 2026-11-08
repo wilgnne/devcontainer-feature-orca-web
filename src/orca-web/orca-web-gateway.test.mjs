@@ -24,7 +24,7 @@ async function fixture(t, { privatePairing = true } = {}) {
     socket.on('end', () => socket.destroy());
   });
   backend.listen(0, '127.0.0.1'); await once(backend, 'listening');
-  const gateway = createGateway({ backendPort: backend.address().port, logPath, privatePairing, projectRoot: '/workspaces/homeprod' });
+  const gateway = createGateway({ backendPort: backend.address().port, logPath, privatePairing, projectRoot: '/workspaces/orca-web' });
   gateway.listen(0, '127.0.0.1'); await once(gateway, 'listening');
   t.after(() => { gateway.closeAllConnections(); gateway.close(); backend.closeAllConnections(); backend.close(); rmSync(dir, { recursive: true }); });
   return { base: `http://127.0.0.1:${gateway.address().port}`, logPath };
@@ -105,7 +105,7 @@ async function desktop(t, { clipboardFails = false, unavailable = false, origin 
       removeAttribute(name) { delete this[name]; }, replaceChildren() { this.innerHTML = ''; }, focus() { this.focused = true; }, select() { this.selected = true; } });
     return elements.get(id);
   };
-  element('public-url').value = 'https://2c97pken-orca--homeprod--wilgnne.coder.lab.wilgnne.dev';
+  element('public-url').value = 'https://92f01roc-orca--orca-web--developer.coder.example.test';
   let copied;
   const context = vm.createContext({ crypto: webcrypto, TextEncoder, btoa, URLSearchParams, URL,
     location: { origin },
@@ -126,12 +126,12 @@ test('desktop produces a native URL and local QR, copies the same offer and can 
   const url = new URL(element('url').value);
   assert.equal(url.protocol, 'orca:'); assert.equal(url.hostname, 'pair');
   const offer = JSON.parse(Buffer.from(url.searchParams.get('code'), 'base64url'));
-  assert.equal(offer.endpoint, 'wss://2c97pken-orca--homeprod--wilgnne.coder.lab.wilgnne.dev');
+  assert.equal(offer.endpoint, 'wss://92f01roc-orca--orca-web--developer.coder.example.test');
   assert.equal(offer.deviceToken, 'test-only');
   assert.equal(offer.hostDescriptor.name, 'máquina');
   assert.match(element('qr').innerHTML, /<svg/);
   assert.equal(element('qr').hidden, false);
-  assert.ok(element('web').href.startsWith('https://2c97pken-orca--homeprod--wilgnne.coder.lab.wilgnne.dev/web-index.html#pairing='));
+  assert.ok(element('web').href.startsWith('https://92f01roc-orca--orca-web--developer.coder.example.test/web-index.html#pairing='));
   await element('copy').click();
   assert.equal(copied(), element('url').value);
   const previous = element('url').value;
@@ -179,10 +179,10 @@ for (const path of ['/', '/__orca/desktop/']) {
 }
 
 test('desktop uses the supplied public address independently of the pairing domain', async t => {
-  const { element } = await desktop(t, { origin: 'https://4s617b8i-orca-pair--homeprod--wilgnne.coder.lab.wilgnne.dev' });
+  const { element } = await desktop(t, { origin: 'https://330ol4ul-orca-pair--orca-web--developer.coder.example.test' });
   const url = new URL(element('url').value);
   const offer = JSON.parse(Buffer.from(url.searchParams.get('code'), 'base64url'));
-  assert.equal(offer.endpoint, 'wss://2c97pken-orca--homeprod--wilgnne.coder.lab.wilgnne.dev');
+  assert.equal(offer.endpoint, 'wss://92f01roc-orca--orca-web--developer.coder.example.test');
 });
 
  test('existing Coder app base path serves pairing API and QR script', async t => {
@@ -223,6 +223,6 @@ test('Coder hash derives the correct public app URL and initializes the editable
   const functions = script.slice(0, script.indexOf('const status ='));
   const context = vm.createContext({ crypto: webcrypto, TextEncoder, URL });
   vm.runInContext(functions, context);
-  assert.equal(await vm.runInContext("coderAppURL('https://4s617b8i-orca-pair--homeprod--wilgnne.coder.lab.wilgnne.dev', agentName, 'orca')", context),
-    'https://2c97pken-orca--homeprod--wilgnne.coder.lab.wilgnne.dev');
+  assert.equal(await vm.runInContext("coderAppURL('https://330ol4ul-orca-pair--orca-web--developer.coder.example.test', agentName, 'orca')", context),
+    'https://92f01roc-orca--orca-web--developer.coder.example.test');
 });

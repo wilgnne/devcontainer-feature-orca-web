@@ -1,6 +1,6 @@
 {
   "id": "orca-web",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "name": "Orca Web",
   "description": "Orca Web with persistent profile, lifecycle and loopback pairing gateway (Ubuntu 26.04).",
   "options": {
@@ -12,7 +12,7 @@
   },
   "mounts": [
     {
-      "source": "homeprod-orca-web",
+      "source": "orca-web",
       "target": "/var/lib/orca-web",
       "type": "volume"
     }

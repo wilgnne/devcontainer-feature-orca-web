@@ -15,7 +15,7 @@ apt-get update && apt-get install -y --no-install-recommends \
     libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libxrender1 libxss1 libxtst6 \
     && rm -rf /var/lib/apt/lists/*
 
-bash ./install-orca.sh "${VERSION:-v1.4.253}" /opt/homeprod-orca
+bash ./install-orca.sh "${VERSION:-v1.4.253}" /opt/orca-web
 install -d -m 755 /usr/local/lib/orca-web
 install -d -m 755 /usr/local/lib/orca-web/vendor
 install -m 644 vendor/qrcode.js /usr/local/lib/orca-web/vendor/qrcode.js
