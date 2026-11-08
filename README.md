@@ -107,6 +107,35 @@ The feature entrypoint repairs ownership of reused volumes when running as root.
 
 If both the container entrypoint and remote user are non-root, sudo is absent, and an existing volume belongs to a different UID/GID, Linux requires a one-time initialization as root. Run `/usr/local/lib/orca-web/orca-web-init.sh` inside the container as root before starting Orca Web. The feature reports this explicitly and preserves the profile; it does not grant additional sudo permissions or make credentials world-readable.
 
+## Coder session environment
+
+No Terraform changes are required. Coder SSH and VS Code sessions receive the
+agent's full environment, including Git authentication and template/user variables.
+The devcontainer `postStartCommand` does not receive that environment.
+
+The feature installs a login-shell hook in `/etc/profile.d/orca-web-coder.sh`.
+On the first Coder SSH, web terminal, or VS Code login-shell session, it restarts
+the lifecycle server once with the complete environment inherited from that
+session. Later sessions leave the running server and its terminals alone.
+Normal Orca profile isolation still replaces `ORCA_*` routing variables.
+No environment snapshot or credentials are written to the persistent volume.
+
+**Before that first Coder session, Orca only has the devcontainer environment.**
+The one-time restart disconnects any Orca sessions opened before environment
+adoption. Connect through Coder before opening Orca after a container restart.
+If your configured shell does not source `/etc/profile.d`, run this once from
+its Coder terminal instead:
+
+```bash
+orca-web inherit-environment
+```
+
+Rebuild the devcontainer to install the hook. Existing Orca terminals must be
+reopened after the server adopts the Coder environment. Template changes or
+updated secrets require `orca-web stop` followed by `orca-web inherit-environment`
+from a new Coder session. This also works outside Coder: the normal lifecycle
+startup is unchanged and the login hook does nothing.
+
 ## Development
 
 ```bash

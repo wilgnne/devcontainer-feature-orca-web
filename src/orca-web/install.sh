@@ -22,6 +22,8 @@ install -m 644 vendor/qrcode.js /usr/local/lib/orca-web/vendor/qrcode.js
 install -m 755 orca-web.sh /usr/local/lib/orca-web/orca-web.sh
 install -m 644 orca-web-gateway.mjs orca-web-pair.mjs orca-web-lock.mjs orca-web-name.mjs orca-web-desktop.html /usr/local/lib/orca-web/
 ln -sf /usr/local/lib/orca-web/orca-web.sh /usr/local/bin/orca-web
+install -d -m 755 /etc/profile.d
+install -m 644 orca-web-coder-profile.sh /etc/profile.d/orca-web-coder.sh
 
 # Docker seeds new volumes from this directory. The entrypoint repairs reused
 # volumes after Dev Containers changes the remote user's UID/GID.
