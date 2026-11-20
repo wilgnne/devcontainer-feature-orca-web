@@ -11,12 +11,13 @@ esac
 
 staging=$(mktemp -d)
 trap 'rm -rf "$staging"' EXIT
-curl -fsSL --retry 3 \
-  "https://github.com/stablyai/orca/releases/download/$version/$asset" \
-  -o "$staging/orca.AppImage"
+url="https://github.com/stablyai/orca/releases/download/$version/$asset"
+printf '[orca-web] Downloading Orca AppImage from %q\n' "$url"
+curl -fsSL --retry 3 "$url" -o "$staging/orca.AppImage"
 chmod +x "$staging/orca.AppImage"
 (cd "$staging" && ./orca.AppImage --appimage-extract >/dev/null)
 mkdir -p "$destination"
 cp -a "$staging/squashfs-root/." "$destination/"
 chmod -R a+rX "$destination"
 printf '%s\n' "$version" > "$destination/orca-web-version"
+printf '[orca-web] Recorded Orca release %q in %q\n' "$version" "$destination/orca-web-version"

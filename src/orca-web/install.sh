@@ -2,6 +2,12 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
+if [[ -v VERSION ]]; then
+    printf '[orca-web] Feature option VERSION=%q\n' "$VERSION"
+else
+    printf '[orca-web] Feature option VERSION is unset\n'
+fi
+
 # Features install as root; use the effective remote user, not the build user.
 remote_user=$(id -un "${_REMOTE_USER:-${_CONTAINER_USER:-root}}")
 remote_uid=$(id -u "$remote_user")
@@ -15,7 +21,13 @@ apt-get update && apt-get install -y --no-install-recommends \
     libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libxrender1 libxss1 libxtst6 \
     && rm -rf /var/lib/apt/lists/*
 
-bash ./install-orca.sh "${VERSION:-v1.4.253}" /opt/orca-web
+orca_version=${VERSION:-}
+if [[ -z $orca_version ]]; then
+    orca_version=$(node -p 'require("./devcontainer-feature.json").options.version.default')
+    printf '[orca-web] Using devcontainer-feature.json default %q\n' "$orca_version"
+fi
+printf '[orca-web] Passing Orca release %q to install-orca.sh\n' "$orca_version"
+bash ./install-orca.sh "$orca_version" /opt/orca-web
 install -d -m 755 /usr/local/lib/orca-web
 install -d -m 755 /usr/local/lib/orca-web/vendor
 install -m 644 vendor/qrcode.js /usr/local/lib/orca-web/vendor/qrcode.js
