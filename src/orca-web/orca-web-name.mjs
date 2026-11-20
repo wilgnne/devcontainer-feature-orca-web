@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import { createRequire } from 'node:module';
 
@@ -11,7 +12,11 @@ const machineName = basename(resolve(process.argv[3]));
 if (!machineName || machineName.length > 255) throw new Error('Invalid project name.');
 process.env.ORCA_USER_DATA_PATH = profile;
 const require = createRequire(import.meta.url);
-const { RuntimeClient } = require('/opt/orca-web/resources/app.asar.unpacked/out/cli/runtime-client.js');
+const cliDir = '/opt/orca-web/resources/app.asar.unpacked/out/cli';
+const runtimeClientPath = resolve(cliDir, 'runtime/client.js');
+const { RuntimeClient } = require(
+  existsSync(runtimeClientPath) ? runtimeClientPath : resolve(cliDir, 'runtime-client.js')
+);
 const client = new RuntimeClient(profile, 15000, null, null);
 const update = await client.call('settings.update', { machineName });
 if (!update.ok) throw new Error('Orca rejected the machine name update.');
